@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Красно-чёрное дерево — Удаление с пошаговым разбором</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app">
+        <header class="header">
+            <h1>Красно-чёрное дерево</h1>
+            <p class="subtitle">Удаление элементов с пошаговым разбором балансировки</p>
+        </header>
+
+        <div class="controls">
+            <div class="input-group">
+                <input type="text" id="nodeValue" placeholder="Значение узла">
+                <button id="addBtn" class="btn btn-add">Добавить</button>
+                <button id="addRandomBtn" class="btn btn-secondary">Случайное дерево</button>
+                <button id="clearBtn" class="btn btn-clear">Очистить</button>
+            </div>
+            <div class="speed-group">
+                <label>Скорость анимации:</label>
+                <input type="range" id="speedSlider" min="200" max="2000" value="800" step="100">
+                <span id="speedLabel">800мс</span>
+            </div>
+        </div>
+
+        <div class="main-area">
+            <div class="tree-container">
+                <svg id="treeSvg"></svg>
+                <div id="deleteButtons"></div>
+            </div>
+            <div class="sidebar">
+                <div class="steps-panel">
+                    <h3>Шаги удаления</h3>
+                    <div id="stepsList" class="steps-list">
+                        <p class="placeholder-text">Нажмите ✕ у узла, чтобы начать удаление</p>
+                    </div>
+                    <div class="step-controls" id="stepControls" style="display:none">
+                        <button id="prevStepBtn" class="btn btn-step">← Назад</button>
+                        <span id="stepCounter">0 / 0</span>
+                        <button id="nextStepBtn" class="btn btn-step">Вперёд →</button>
+                        <button id="autoPlayBtn" class="btn btn-step">▶ Авто</button>
+                        <button id="finishBtn" class="btn btn-add">Завершить</button>
+                    </div>
+                </div>
+                <div class="rules-panel">
+                    <h3>Свойства КЧ-дерева</h3>
+                    <ul class="rules-list">
+                        <li>Каждый узел — красный или чёрный</li>
+                        <li>Корень всегда чёрный</li>
+                        <li>Все листья (NIL) — чёрные</li>
+                        <li>У красного узла оба потомка чёрные</li>
+                        <li>Все пути от узла до листьев содержат одинаковое число чёрных узлов</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div id="tooltip" class="tooltip" style="display:none"></div>
+    </div>
+
+    <script src="rbtree.js"></script>
+    <script src="render.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
