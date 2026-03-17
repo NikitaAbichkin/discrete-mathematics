@@ -1,260 +1,392 @@
-// Красно-чёрное дерево с генерацией шагов удаления
-const RED = 'red';
-const BLACK = 'black';
+// ============================================================
+// rbtree.js — Реализация красно-чёрного дерева (Red-Black Tree)
+// Включает вставку, удаление и генерацию пошаговых снимков
+// состояния дерева для визуализации процесса удаления.
+// ============================================================
 
+// Константы цветов узлов красно-чёрного дерева
+const RED = 'red';     // Красный цвет узла
+const BLACK = 'black'; // Чёрный цвет узла
+
+// ============================================================
+// Класс RBNode — узел красно-чёрного дерева
+// Каждый узел хранит значение, цвет и ссылки на потомков/родителя
+// ============================================================
 class RBNode {
+    // Конструктор узла. По умолчанию новый узел — красный,
+    // потому что вставка красного узла нарушает меньше свойств КЧ-дерева
     constructor(value, color = RED) {
-        this.value = value;
-        this.color = color;
-        this.left = null;
-        this.right = null;
-        this.parent = null;
+        this.value = value;   // Числовое значение (ключ) узла
+        this.color = color;   // Цвет: 'red' или 'black'
+        this.left = null;     // Ссылка на левого потомка (меньшие значения)
+        this.right = null;    // Ссылка на правого потомка (большие значения)
+        this.parent = null;   // Ссылка на родительский узел (null для корня)
     }
 }
 
+// ============================================================
+// Класс RBTree — само красно-чёрное дерево
+// Содержит корень и специальный NIL-узел (сентинель),
+// который заменяет null-указатели для упрощения алгоритмов
+// ============================================================
 class RBTree {
     constructor() {
+        // NIL — специальный «пустой» узел, общий для всего дерева.
+        // Все листья дерева указывают на него вместо null.
+        // Это упрощает алгоритмы балансировки, т.к. у NIL всегда есть цвет (чёрный).
         this.NIL = new RBNode(null, BLACK);
+
+        // Изначально дерево пустое — корень указывает на NIL
         this.root = this.NIL;
     }
 
-    // Глубокое копирование дерева для снимков состояния
+    // ============================================================
+    // cloneTree() — создаёт глубокую (полную) копию дерева.
+    // Нужна для сохранения «снимков» состояния на каждом шаге удаления,
+    // чтобы потом показывать их пользователю пошагово.
+    // ============================================================
     cloneTree() {
-        const tree = new RBTree();
-        if (this.root === this.NIL) return tree;
-        tree.root = this._cloneNode(this.root, null, tree.NIL);
+        const tree = new RBTree();                              // Создаём новое пустое дерево
+        if (this.root === this.NIL) return tree;                // Если дерево пустое — возвращаем пустую копию
+        tree.root = this._cloneNode(this.root, null, tree.NIL); // Рекурсивно копируем все узлы
         return tree;
     }
 
+    // Рекурсивное копирование одного узла и всех его потомков
     _cloneNode(node, parent, nil) {
-        if (node === this.NIL || node === null) return nil;
-        const copy = new RBNode(node.value, node.color);
-        copy.parent = parent;
-        copy._doubleBlack = node._doubleBlack || false;
-        copy._highlight = node._highlight || false;
-        copy._label = node._label || '';
-        copy.left = this._cloneNode(node.left, copy, nil);
-        copy.right = this._cloneNode(node.right, copy, nil);
+        if (node === this.NIL || node === null) return nil; // Базовый случай: NIL или null → возвращаем NIL копии
+        const copy = new RBNode(node.value, node.color);    // Создаём копию узла с тем же значением и цветом
+        copy.parent = parent;                                // Устанавливаем родителя в копии
+        copy._doubleBlack = node._doubleBlack || false;      // Копируем флаг «двойной чёрный» (для визуализации)
+        copy._highlight = node._highlight || false;           // Копируем флаг подсветки (для визуализации)
+        copy._label = node._label || '';                      // Копируем текстовую метку (для визуализации)
+        copy.left = this._cloneNode(node.left, copy, nil);   // Рекурсивно копируем левое поддерево
+        copy.right = this._cloneNode(node.right, copy, nil); // Рекурсивно копируем правое поддерево
         return copy;
     }
 
-    // Сериализация дерева в простой объект для рендера
+    // ============================================================
+    // serialize() — преобразует дерево в простой JS-объект (без циклических ссылок).
+    // Этот объект передаётся в рендерер для отрисовки SVG.
+    // Нужен потому что SVG-рендерер не работает напрямую с RBNode.
+    // ============================================================
     serialize() {
         return this._serializeNode(this.root);
     }
 
+    // Рекурсивная сериализация одного узла
     _serializeNode(node) {
-        if (node === this.NIL || node === null) return null;
+        if (node === this.NIL || node === null) return null; // NIL → null в сериализованном виде
         return {
-            value: node.value,
-            color: node.color,
-            doubleBlack: node._doubleBlack || false,
-            highlight: node._highlight || false,
-            label: node._label || '',
-            left: this._serializeNode(node.left),
-            right: this._serializeNode(node.right)
+            value: node.value,                               // Числовое значение
+            color: node.color,                               // Цвет узла
+            doubleBlack: node._doubleBlack || false,          // Флаг двойного чёрного
+            highlight: node._highlight || false,              // Флаг подсветки
+            label: node._label || '',                         // Текстовая метка
+            left: this._serializeNode(node.left),             // Левое поддерево (рекурсия)
+            right: this._serializeNode(node.right)            // Правое поддерево (рекурсия)
         };
     }
 
-    // Поиск узла
+    // ============================================================
+    // search(value) — поиск узла по значению.
+    // Стандартный поиск в бинарном дереве: если значение меньше — идём влево,
+    // если больше — вправо, пока не найдём или не дойдём до NIL.
+    // Сложность: O(log n) благодаря балансировке.
+    // ============================================================
     search(value) {
-        let node = this.root;
-        while (node !== this.NIL) {
-            if (value === node.value) return node;
-            node = value < node.value ? node.left : node.right;
+        let node = this.root;                                     // Начинаем с корня
+        while (node !== this.NIL) {                               // Пока не дошли до пустого узла
+            if (value === node.value) return node;                // Нашли — возвращаем узел
+            node = value < node.value ? node.left : node.right;   // Идём влево или вправо
         }
-        return null;
+        return null;                                              // Не нашли — возвращаем null
     }
 
-    // Получить все значения
+    // ============================================================
+    // getValues() — возвращает массив всех значений дерева
+    // в отсортированном порядке (in-order обход).
+    // ============================================================
     getValues() {
-        const vals = [];
-        this._inorder(this.root, vals);
+        const vals = [];                    // Массив для результата
+        this._inorder(this.root, vals);     // Запускаем in-order обход
         return vals;
     }
 
+    // Рекурсивный in-order (симметричный) обход:
+    // сначала левое поддерево, потом узел, потом правое поддерево.
+    // Даёт значения в возрастающем порядке для BST.
     _inorder(node, arr) {
-        if (node === this.NIL) return;
-        this._inorder(node.left, arr);
-        arr.push(node.value);
-        this._inorder(node.right, arr);
+        if (node === this.NIL) return;      // Базовый случай: дошли до NIL
+        this._inorder(node.left, arr);      // Обходим левое поддерево
+        arr.push(node.value);               // Добавляем значение текущего узла
+        this._inorder(node.right, arr);     // Обходим правое поддерево
     }
 
-    // Левый поворот
+    // ============================================================
+    // rotateLeft(x) — левый поворот вокруг узла x.
+    //
+    // Визуально:
+    //      x                y
+    //     / \              / \
+    //    a   y    →       x   c
+    //       / \          / \
+    //      b   c        a   b
+    //
+    // Поворот сохраняет свойство BST (порядок значений не меняется).
+    // Используется при балансировке после вставки и удаления.
+    // ============================================================
     rotateLeft(x) {
-        const y = x.right;
-        x.right = y.left;
-        if (y.left !== this.NIL) y.left.parent = x;
-        y.parent = x.parent;
-        if (x.parent === null) {
-            this.root = y;
-        } else if (x === x.parent.left) {
-            x.parent.left = y;
-        } else {
-            x.parent.right = y;
+        const y = x.right;                              // y — правый потомок x, он станет новым корнем поддерева
+        x.right = y.left;                               // Левое поддерево y становится правым поддеревом x
+        if (y.left !== this.NIL) y.left.parent = x;     // Обновляем родителя у бывшего левого потомка y
+        y.parent = x.parent;                             // y получает родителя x
+        if (x.parent === null) {                         // Если x был корнем дерева —
+            this.root = y;                               //   y становится новым корнем
+        } else if (x === x.parent.left) {                // Если x был левым потомком —
+            x.parent.left = y;                           //   y занимает его место
+        } else {                                         // Если x был правым потомком —
+            x.parent.right = y;                          //   y занимает его место
         }
-        y.left = x;
-        x.parent = y;
+        y.left = x;                                      // x становится левым потомком y
+        x.parent = y;                                    // Обновляем родителя x
     }
 
-    // Правый поворот
+    // ============================================================
+    // rotateRight(x) — правый поворот вокруг узла x.
+    //
+    // Визуально (зеркально левому повороту):
+    //        x              y
+    //       / \            / \
+    //      y   c   →     a   x
+    //     / \               / \
+    //    a   b             b   c
+    //
+    // ============================================================
     rotateRight(x) {
-        const y = x.left;
-        x.left = y.right;
-        if (y.right !== this.NIL) y.right.parent = x;
-        y.parent = x.parent;
-        if (x.parent === null) {
-            this.root = y;
-        } else if (x === x.parent.right) {
-            x.parent.right = y;
-        } else {
-            x.parent.left = y;
+        const y = x.left;                                // y — левый потомок x, станет новым корнем поддерева
+        x.left = y.right;                                // Правое поддерево y → левое поддерево x
+        if (y.right !== this.NIL) y.right.parent = x;    // Обновляем родителя
+        y.parent = x.parent;                              // y наследует родителя x
+        if (x.parent === null) {                          // Если x был корнем —
+            this.root = y;                                //   y новый корень
+        } else if (x === x.parent.right) {                // Если x был правым потомком —
+            x.parent.right = y;                           //   y занимает его место
+        } else {                                          // Если x был левым потомком —
+            x.parent.left = y;                            //   y занимает его место
         }
-        y.right = x;
-        x.parent = y;
+        y.right = x;                                     // x становится правым потомком y
+        x.parent = y;                                    // Обновляем родителя x
     }
 
-    // Вставка с балансировкой
+    // ============================================================
+    // insert(value) — вставка нового значения в КЧ-дерево.
+    //
+    // Алгоритм:
+    // 1. Вставляем как в обычное BST (бинарное дерево поиска)
+    // 2. Новый узел всегда красный
+    // 3. Вызываем _insertFix для восстановления свойств КЧ-дерева
+    // ============================================================
     insert(value) {
-        if (this.search(value)) return; // дубликаты не вставляем
+        if (this.search(value)) return;      // Если значение уже есть — не вставляем (дубликаты запрещены)
 
-        const node = new RBNode(value);
-        node.left = this.NIL;
+        const node = new RBNode(value);      // Создаём новый красный узел
+        node.left = this.NIL;                // Его потомки — NIL (пустые)
         node.right = this.NIL;
 
-        let parent = null;
-        let current = this.root;
+        // Стандартная вставка в BST: ищем позицию для нового узла
+        let parent = null;                   // Будущий родитель нового узла
+        let current = this.root;             // Начинаем поиск с корня
 
-        while (current !== this.NIL) {
-            parent = current;
-            current = value < current.value ? current.left : current.right;
+        while (current !== this.NIL) {                               // Спускаемся по дереву
+            parent = current;                                        // Запоминаем текущий узел как потенциального родителя
+            current = value < current.value ? current.left : current.right; // Идём влево или вправо
         }
 
+        // Привязываем новый узел к найденному родителю
         node.parent = parent;
-        if (parent === null) {
-            this.root = node;
-        } else if (value < parent.value) {
-            parent.left = node;
-        } else {
-            parent.right = node;
+        if (parent === null) {                // Дерево было пустое —
+            this.root = node;                 //   новый узел становится корнем
+        } else if (value < parent.value) {    // Значение меньше родителя —
+            parent.left = node;               //   вставляем влево
+        } else {                              // Значение больше родителя —
+            parent.right = node;              //   вставляем вправо
         }
 
-        if (node.parent === null) {
-            node.color = BLACK;
+        // Особые случаи, когда балансировка не нужна:
+        if (node.parent === null) {           // Новый узел — корень дерева
+            node.color = BLACK;               // Корень всегда чёрный (свойство 2)
             return;
         }
 
-        if (node.parent.parent === null) return;
+        if (node.parent.parent === null) return; // Родитель — корень, нарушений нет
 
+        // Запускаем процедуру восстановления свойств КЧ-дерева
         this._insertFix(node);
     }
 
+    // ============================================================
+    // _insertFix(k) — восстановление свойств КЧ-дерева после вставки.
+    //
+    // Проблема: новый узел красный, и его родитель тоже может быть красным,
+    // что нарушает свойство 4 (у красного узла оба потомка чёрные).
+    //
+    // Решение зависит от цвета «дяди» (брата родителя):
+    // - Дядя красный → перекрашиваем и поднимаемся вверх
+    // - Дядя чёрный → повороты + перекраска
+    // ============================================================
     _insertFix(k) {
+        // Цикл работает, пока есть нарушение: родитель k — красный
         while (k.parent && k.parent.color === RED) {
+            // Определяем, является ли родитель k правым или левым потомком деда
             if (k.parent === k.parent.parent.right) {
-                const u = k.parent.parent.left;
+                // Родитель k — правый потомок деда
+                const u = k.parent.parent.left;          // u — дядя (левый потомок деда)
+
                 if (u.color === RED) {
-                    u.color = BLACK;
-                    k.parent.color = BLACK;
-                    k.parent.parent.color = RED;
-                    k = k.parent.parent;
+                    // Случай 1: дядя красный → перекрашиваем
+                    u.color = BLACK;                      // Дядю красим в чёрный
+                    k.parent.color = BLACK;               // Родителя красим в чёрный
+                    k.parent.parent.color = RED;          // Деда красим в красный
+                    k = k.parent.parent;                  // Поднимаемся к деду и проверяем дальше
                 } else {
+                    // Случай 2/3: дядя чёрный → нужны повороты
                     if (k === k.parent.left) {
+                        // Случай 2: k — левый потомок (зигзаг) → сначала правый поворот
                         k = k.parent;
-                        this.rotateRight(k);
+                        this.rotateRight(k);              // Правый поворот приводит к случаю 3
                     }
-                    k.parent.color = BLACK;
-                    k.parent.parent.color = RED;
-                    this.rotateLeft(k.parent.parent);
+                    // Случай 3: k — правый потомок (линия) → левый поворот деда
+                    k.parent.color = BLACK;               // Родитель становится чёрным
+                    k.parent.parent.color = RED;          // Дед становится красным
+                    this.rotateLeft(k.parent.parent);     // Левый поворот вокруг деда
                 }
             } else {
-                const u = k.parent.parent.right;
+                // Зеркальный случай: родитель k — левый потомок деда
+                const u = k.parent.parent.right;          // u — дядя (правый потомок деда)
+
                 if (u.color === RED) {
+                    // Случай 1 (зеркальный): дядя красный
                     u.color = BLACK;
                     k.parent.color = BLACK;
                     k.parent.parent.color = RED;
                     k = k.parent.parent;
                 } else {
                     if (k === k.parent.right) {
+                        // Случай 2 (зеркальный): зигзаг → левый поворот
                         k = k.parent;
                         this.rotateLeft(k);
                     }
+                    // Случай 3 (зеркальный): линия → правый поворот деда
                     k.parent.color = BLACK;
                     k.parent.parent.color = RED;
                     this.rotateRight(k.parent.parent);
                 }
             }
-            if (k === this.root) break;
+            if (k === this.root) break;                   // Дошли до корня — выходим
         }
-        this.root.color = BLACK;
+        this.root.color = BLACK;                          // Корень всегда чёрный (гарантируем свойство 2)
     }
 
-    // Минимум в поддереве
+    // ============================================================
+    // minimum(node) — находит узел с минимальным значением в поддереве.
+    // Просто идём влево до упора, т.к. в BST минимум всегда в самом левом узле.
+    // Используется для поиска «преемника» при удалении узла с двумя потомками.
+    // ============================================================
     minimum(node) {
-        while (node.left !== this.NIL) {
-            node = node.left;
+        while (node.left !== this.NIL) {     // Пока есть левый потомок —
+            node = node.left;                // идём влево
         }
-        return node;
+        return node;                         // Самый левый узел — минимум
     }
 
-    // Трансплантация
+    // ============================================================
+    // transplant(u, v) — заменяет поддерево с корнем u на поддерево с корнем v.
+    //
+    // Это вспомогательная операция для удаления: «пересаживает» v на место u.
+    // Не трогает потомков u — только связь u с его родителем.
+    // ============================================================
     transplant(u, v) {
-        if (u.parent === null) {
-            this.root = v;
-        } else if (u === u.parent.left) {
-            u.parent.left = v;
-        } else {
-            u.parent.right = v;
+        if (u.parent === null) {             // u — корень дерева
+            this.root = v;                   //   v становится новым корнем
+        } else if (u === u.parent.left) {    // u — левый потомок
+            u.parent.left = v;               //   v занимает место u слева
+        } else {                             // u — правый потомок
+            u.parent.right = v;              //   v занимает место u справа
         }
-        v.parent = u.parent;
+        v.parent = u.parent;                 // v получает родителя u
     }
 
-    // Удаление с генерацией шагов
+    // ============================================================
+    // deleteWithSteps(value) — удаление узла с генерацией пошаговых снимков.
+    //
+    // Это главная функция для визуализации. Она:
+    // 1. Удаляет узел из дерева (как стандартное BST-удаление)
+    // 2. На каждом шаге делает «снимок» дерева (cloneTree + serialize)
+    // 3. Добавляет текстовое описание и название применяемого правила
+    // 4. Возвращает массив шагов для пошаговой анимации
+    //
+    // Три случая удаления в BST:
+    // 1. Узел — лист (или имеет только одного потомка) → заменяем потомком
+    // 2. Узел имеет два потомка → находим преемника (минимум правого поддерева),
+    //    копируем его значение и удаляем преемника
+    //
+    // После BST-удаления, если удалённый узел был чёрным,
+    // нарушается свойство 5 (чёрная высота) → запускаем _deleteFixWithSteps
+    // ============================================================
     deleteWithSteps(value) {
-        const steps = [];
-        const node = this.search(value);
-        if (!node) return steps;
+        const steps = [];                    // Массив шагов для анимации
+        const node = this.search(value);     // Ищем узел с данным значением
+        if (!node) return steps;             // Если не найден — возвращаем пустой массив
 
-        // Шаг 0: начальное состояние
-        this._clearLabels(this.root);
-        node._highlight = true;
-        node._label = 'удаляемый';
+        // === Шаг 0: показываем начальное состояние с подсвеченным узлом ===
+        this._clearLabels(this.root);        // Очищаем все метки и подсветки
+        node._highlight = true;              // Подсвечиваем удаляемый узел
+        node._label = 'удаляемый';           // Ставим метку
         steps.push({
-            tree: this.cloneTree().serialize(),
-            text: `Удаляем узел ${value}`,
-            rule: ''
+            tree: this.cloneTree().serialize(), // Снимок дерева
+            text: `Удаляем узел ${value}`,      // Текст шага
+            rule: ''                            // Правило (пока нет)
         });
-        node._highlight = false;
+        node._highlight = false;             // Снимаем подсветку для дальнейших операций
         node._label = '';
 
-        let y = node;
-        let yOrigColor = y.color;
-        let x;
+        // Переменные для алгоритма удаления:
+        let y = node;                        // y — узел, который фактически будет удалён из дерева
+        let yOrigColor = y.color;            // Запоминаем цвет удаляемого узла (важно для балансировки!)
+        let x;                               // x — узел, который займёт место y (ребёнок удаляемого)
 
         if (node.left === this.NIL) {
-            // Случай 1: нет левого потомка
-            x = node.right;
+            // ===== Случай 1: нет левого потомка =====
+            // У узла нет левого потомка → заменяем его правым (который может быть NIL)
+            x = node.right;                  // x — правый потомок (заменит удаляемый узел)
             steps.push({
                 tree: this._snapshotWith(node, 'удаляемый'),
                 text: `Узел ${value} не имеет левого потомка. Заменяем его правым потомком.`,
                 rule: 'Случай 1: один потомок или лист'
             });
-            this.transplant(node, node.right);
+            this.transplant(node, node.right); // Заменяем узел его правым потомком
+
         } else if (node.right === this.NIL) {
-            // Случай 2: нет правого потомка
+            // ===== Случай 2: нет правого потомка =====
+            // У узла нет правого потомка → заменяем его левым
             x = node.left;
             steps.push({
                 tree: this._snapshotWith(node, 'удаляемый'),
                 text: `Узел ${value} не имеет правого потомка. Заменяем его левым потомком.`,
                 rule: 'Случай 2: один потомок'
             });
-            this.transplant(node, node.left);
-        } else {
-            // Случай 3: два потомка
-            y = this.minimum(node.right);
-            yOrigColor = y.color;
-            x = y.right;
+            this.transplant(node, node.left);  // Заменяем узел его левым потомком
 
+        } else {
+            // ===== Случай 3: два потомка =====
+            // Находим in-order преемника — минимальный элемент в правом поддереве.
+            // Преемник гарантированно не имеет левого потомка.
+            y = this.minimum(node.right);    // Преемник = минимум правого поддерева
+            yOrigColor = y.color;            // Запоминаем цвет ПРЕЕМНИКА (не удаляемого узла!)
+            x = y.right;                     // x — правый потомок преемника
+
+            // Показываем удаляемый узел и его преемника
             this._clearLabels(this.root);
             node._highlight = true;
             node._label = 'удаляемый';
@@ -268,22 +400,25 @@ class RBTree {
             this._clearLabels(this.root);
 
             if (y.parent === node) {
-                x.parent = y;
+                // Преемник — прямой правый потомок удаляемого узла
+                x.parent = y;                // Устанавливаем родителя x (нужно для NIL)
             } else {
+                // Преемник глубже в дереве — сначала «вынимаем» его из текущей позиции
                 steps.push({
                     tree: this._snapshotWith(y, 'преемник'),
                     text: `Заменяем преемник ${y.value} его правым потомком`,
                     rule: 'Трансплантация преемника'
                 });
-                this.transplant(y, y.right);
-                y.right = node.right;
+                this.transplant(y, y.right);   // Заменяем преемника его правым потомком
+                y.right = node.right;          // Правое поддерево удаляемого → правое поддерево преемника
                 y.right.parent = y;
             }
 
-            this.transplant(node, y);
-            y.left = node.left;
+            // Ставим преемника на место удаляемого узла
+            this.transplant(node, y);          // Преемник занимает место удаляемого
+            y.left = node.left;                // Левое поддерево удаляемого → левое поддерево преемника
             y.left.parent = y;
-            y.color = node.color;
+            y.color = node.color;              // Преемник получает цвет удаляемого узла
 
             steps.push({
                 tree: this._snapshotWith(y, 'на месте удалённого'),
@@ -292,15 +427,19 @@ class RBTree {
             });
         }
 
-        // Если удалённый узел (или преемник) был чёрным, нужна балансировка
+        // ===== Проверяем, нужна ли балансировка =====
+        // Балансировка нужна ТОЛЬКО если фактически удалённый узел (y) был ЧЁРНЫМ.
+        // Удаление чёрного узла уменьшает чёрную высоту на 1 в одной из ветвей → нарушение свойства 5.
         if (yOrigColor === BLACK) {
             steps.push({
-                tree: this._snapshotWithDB(x),
+                tree: this._snapshotWithDB(x), // Снимок с отметкой «двойной чёрный»
                 text: `Удалённый узел был чёрным → нарушено свойство чёрной высоты. Узел ${x.value !== null ? x.value : 'NIL'} получает «двойной чёрный» статус.`,
                 rule: 'Двойной чёрный узел'
             });
+            // Запускаем процедуру устранения двойного чёрного узла
             this._deleteFixWithSteps(x, steps);
         } else {
+            // Удалённый узел был красным — чёрная высота не изменилась
             steps.push({
                 tree: this.cloneTree().serialize(),
                 text: `Удалённый узел был красным — балансировка не требуется.`,
@@ -308,7 +447,7 @@ class RBTree {
             });
         }
 
-        // Финальное состояние
+        // Финальный снимок — дерево после завершения всех операций
         this._clearLabels(this.root);
         steps.push({
             tree: this.cloneTree().serialize(),
@@ -316,15 +455,33 @@ class RBTree {
             rule: 'Готово'
         });
 
-        return steps;
+        return steps; // Возвращаем массив всех шагов
     }
 
+    // ============================================================
+    // _deleteFixWithSteps(x, steps) — устранение «двойного чёрного» узла.
+    //
+    // «Двойной чёрный» (double black) — это концепция, означающая, что
+    // узел x «должен» считаться за два чёрных для сохранения чёрной высоты.
+    //
+    // Существует 4 случая (и их зеркальные варианты), определяемые
+    // цветами брата (sibling) и его потомков:
+    //
+    // Случай 1: Брат красный → поворот + перекраска, переход к случаям 2-4
+    // Случай 2: Брат чёрный, оба потомка чёрные → перекраска брата, подъём вверх
+    // Случай 3: Брат чёрный, ближний потомок красный → поворот, переход к случаю 4
+    // Случай 4: Брат чёрный, дальний потомок красный → финальный поворот, ГОТОВО
+    // ============================================================
     _deleteFixWithSteps(x, steps) {
+        // Цикл работает, пока x — не корень и x — чёрный (т.е. «двойной чёрный»)
         while (x !== this.root && x.color === BLACK) {
             if (x === x.parent.left) {
-                let w = x.parent.right; // брат
+                // x — левый потомок своего родителя
+                let w = x.parent.right;      // w — брат x (правый потомок родителя)
 
-                // Случай 1: брат красный
+                // ===== Случай 1: брат w — красный =====
+                // Перекрашиваем w в чёрный, родителя в красный, левый поворот.
+                // После этого у x появится новый чёрный брат → переход к случаям 2-4.
                 if (w.color === RED) {
                     this._clearLabels(this.root);
                     x._doubleBlack = true;
@@ -338,10 +495,10 @@ class RBTree {
                     });
                     this._clearLabels(this.root);
 
-                    w.color = BLACK;
-                    x.parent.color = RED;
-                    this.rotateLeft(x.parent);
-                    w = x.parent.right;
+                    w.color = BLACK;             // Брат: красный → чёрный
+                    x.parent.color = RED;        // Родитель: чёрный → красный
+                    this.rotateLeft(x.parent);   // Левый поворот вокруг родителя
+                    w = x.parent.right;          // Обновляем брата (теперь это новый правый потомок родителя)
 
                     steps.push({
                         tree: this._snapshotWithDB(x),
@@ -350,7 +507,9 @@ class RBTree {
                     });
                 }
 
-                // Случай 2: брат чёрный, оба потомка брата чёрные
+                // ===== Случай 2: брат w — чёрный, оба потомка w — чёрные =====
+                // «Забираем» один чёрный уровень у w (красим в красный).
+                // Двойной чёрный поднимается к родителю x.
                 if (w.left.color === BLACK && w.right.color === BLACK) {
                     this._clearLabels(this.root);
                     x._doubleBlack = true;
@@ -364,10 +523,11 @@ class RBTree {
                     });
                     this._clearLabels(this.root);
 
-                    w.color = RED;
-                    x = x.parent;
+                    w.color = RED;               // Брат: чёрный → красный
+                    x = x.parent;                // Поднимаем проблему к родителю (новый x)
                 } else {
-                    // Случай 3: правый потомок брата чёрный (левый — красный)
+                    // ===== Случай 3: правый потомок w — чёрный, левый — красный =====
+                    // Поворот вокруг w приводит ситуацию к случаю 4.
                     if (w.right.color === BLACK) {
                         this._clearLabels(this.root);
                         w._highlight = true;
@@ -381,10 +541,10 @@ class RBTree {
                         });
                         this._clearLabels(this.root);
 
-                        w.left.color = BLACK;
-                        w.color = RED;
-                        this.rotateRight(w);
-                        w = x.parent.right;
+                        w.left.color = BLACK;    // Левый потомок брата: красный → чёрный
+                        w.color = RED;           // Брат: чёрный → красный
+                        this.rotateRight(w);     // Правый поворот вокруг брата
+                        w = x.parent.right;      // Обновляем брата
 
                         steps.push({
                             tree: this._snapshotWithDB(x),
@@ -393,7 +553,8 @@ class RBTree {
                         });
                     }
 
-                    // Случай 4: правый потомок брата красный
+                    // ===== Случай 4: правый потомок w — красный =====
+                    // Финальный случай: один поворот и перекраска полностью решают проблему.
                     this._clearLabels(this.root);
                     x._doubleBlack = true;
                     x._label = 'x';
@@ -408,16 +569,18 @@ class RBTree {
                     });
                     this._clearLabels(this.root);
 
-                    w.color = x.parent.color;
-                    x.parent.color = BLACK;
-                    w.right.color = BLACK;
-                    this.rotateLeft(x.parent);
-                    x = this.root;
+                    w.color = x.parent.color;    // Брат получает цвет родителя
+                    x.parent.color = BLACK;      // Родитель → чёрный
+                    w.right.color = BLACK;       // Правый потомок брата → чёрный
+                    this.rotateLeft(x.parent);   // Левый поворот вокруг родителя
+                    x = this.root;               // Двойной чёрный устранён — выходим из цикла
                 }
             } else {
-                // Зеркальные случаи
-                let w = x.parent.left;
+                // ===== Зеркальные случаи (x — правый потомок) =====
+                // Логика полностью аналогична, но лево и право поменяны местами
+                let w = x.parent.left;           // Брат — левый потомок родителя
 
+                // Случай 1 (зеркальный): брат красный
                 if (w.color === RED) {
                     this._clearLabels(this.root);
                     x._doubleBlack = true;
@@ -433,7 +596,7 @@ class RBTree {
 
                     w.color = BLACK;
                     x.parent.color = RED;
-                    this.rotateRight(x.parent);
+                    this.rotateRight(x.parent);  // Правый поворот (зеркально левому)
                     w = x.parent.left;
 
                     steps.push({
@@ -443,6 +606,7 @@ class RBTree {
                     });
                 }
 
+                // Случай 2 (зеркальный): оба потомка брата чёрные
                 if (w.right.color === BLACK && w.left.color === BLACK) {
                     this._clearLabels(this.root);
                     x._doubleBlack = true;
@@ -459,6 +623,7 @@ class RBTree {
                     w.color = RED;
                     x = x.parent;
                 } else {
+                    // Случай 3 (зеркальный): левый потомок брата чёрный
                     if (w.left.color === BLACK) {
                         this._clearLabels(this.root);
                         w._highlight = true;
@@ -474,7 +639,7 @@ class RBTree {
 
                         w.right.color = BLACK;
                         w.color = RED;
-                        this.rotateLeft(w);
+                        this.rotateLeft(w);      // Левый поворот (зеркально правому)
                         w = x.parent.left;
 
                         steps.push({
@@ -484,6 +649,7 @@ class RBTree {
                         });
                     }
 
+                    // Случай 4 (зеркальный): левый потомок брата красный
                     this._clearLabels(this.root);
                     x._doubleBlack = true;
                     x._label = 'x';
@@ -501,14 +667,16 @@ class RBTree {
                     w.color = x.parent.color;
                     x.parent.color = BLACK;
                     w.left.color = BLACK;
-                    this.rotateRight(x.parent);
-                    x = this.root;
+                    this.rotateRight(x.parent);  // Правый поворот (зеркально)
+                    x = this.root;               // Двойной чёрный устранён
                 }
             }
         }
 
+        // Финальное исправление: x становится просто чёрным (снимаем «двойной»)
         x.color = BLACK;
 
+        // Добавляем шаг о завершении балансировки
         if (x !== this.root || steps.length === 0) {
             steps.push({
                 tree: this.cloneTree().serialize(),
@@ -520,30 +688,43 @@ class RBTree {
         }
     }
 
+    // ============================================================
+    // _snapshotWith(node, label) — создаёт снимок дерева с подсвеченным узлом и меткой.
+    // Используется для шагов, где нужно показать конкретный узел.
+    // ============================================================
     _snapshotWith(node, label) {
-        this._clearLabels(this.root);
-        node._highlight = true;
-        node._label = label;
-        const snap = this.cloneTree().serialize();
-        this._clearLabels(this.root);
+        this._clearLabels(this.root);        // Сначала очищаем все метки
+        node._highlight = true;              // Подсвечиваем нужный узел
+        node._label = label;                 // Ставим метку
+        const snap = this.cloneTree().serialize(); // Делаем снимок
+        this._clearLabels(this.root);        // Очищаем метки обратно
         return snap;
     }
 
+    // ============================================================
+    // _snapshotWithDB(node) — создаёт снимок с отметкой «двойной чёрный».
+    // Используется при визуализации двойного чёрного узла.
+    // ============================================================
     _snapshotWithDB(node) {
         this._clearLabels(this.root);
-        node._doubleBlack = true;
-        node._label = 'двойной чёрный';
+        node._doubleBlack = true;            // Включаем флаг «двойной чёрный»
+        node._label = 'двойной чёрный';      // Текстовая метка
         const snap = this.cloneTree().serialize();
         this._clearLabels(this.root);
         return snap;
     }
 
+    // ============================================================
+    // _clearLabels(node) — рекурсивно очищает все визуальные метки
+    // (подсветку, двойной чёрный, текстовые метки) со всех узлов дерева.
+    // Вызывается перед каждым новым шагом, чтобы старые метки не мешали.
+    // ============================================================
     _clearLabels(node) {
-        if (node === this.NIL || node === null) return;
-        node._highlight = false;
-        node._doubleBlack = false;
-        node._label = '';
-        this._clearLabels(node.left);
-        this._clearLabels(node.right);
+        if (node === this.NIL || node === null) return; // Базовый случай
+        node._highlight = false;             // Снимаем подсветку
+        node._doubleBlack = false;           // Снимаем флаг двойного чёрного
+        node._label = '';                    // Очищаем текстовую метку
+        this._clearLabels(node.left);        // Рекурсивно для левого поддерева
+        this._clearLabels(node.right);       // Рекурсивно для правого поддерева
     }
 }
