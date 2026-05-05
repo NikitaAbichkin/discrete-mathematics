@@ -1,0 +1,20 @@
+# macOS
+.DS_Store
+
+# Local .NET SDK and local CLI cache
+.dotnet/
+.dotnet-cli/
+.nuget/
+
+# Build artifacts
+bin/
+obj/
+
+# IDE files
+.idea/
+.vs/
+*.user
+*.suo
+
+# Logs
+*.log

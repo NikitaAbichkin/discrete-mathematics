@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Graph Lab</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;700;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script defer src="vendor/vis-network.min.js"></script>
+    <script defer src="app.js"></script>
+</head>
+<body>
+    <div class="page-shell">
+        <div class="orb orb-a"></div>
+        <div class="orb orb-b"></div>
+        <div class="grid-noise"></div>
+
+        <header class="hero">
+            <div class="hero-copy panel panel-hero">
+                <p class="eyebrow">Social Graph / BFS / DFS / vis.js</p>
+                <h1>Кто знает кого, <span>через кого</span> и насколько быстро можно до этого докопаться.</h1>
+                <p class="hero-text">
+                    Этот сайт визуализирует социальный граф друзей, запускает
+                    <strong>BFS</strong> для кратчайшей цепочки знакомств и
+                    <strong>DFS</strong> для всех возможных связей. Всё, что любит преподаватель: граф, алгоритмы, объяснение шагов и живая демонстрация.
+                </p>
+
+                <div class="hero-tags">
+                    <span>Кликабельные узлы</span>
+                    <span>Подсветка маршрутов</span>
+                    <span>Пошаговое объяснение</span>
+                    <span>Интерактивная легенда</span>
+                </div>
+            </div>
+
+            <aside class="hero-side panel">
+                <p class="mini-title">Как пользоваться</p>
+                <ol class="instruction-list" id="tips-list">
+                    <li>Загрузка подсказок...</li>
+                </ol>
+                <div class="status-box" id="selection-status">
+                    Выбери стартовую и конечную вершину. Если лень печатать — просто кликай по людям на графе.
+                </div>
+            </aside>
+        </header>
+
+        <main class="dashboard">
+            <section class="controls panel">
+                <div class="section-topline">
+                    <p class="mini-title">Панель запуска</p>
+                    <span class="chip">Лабораторка без уныния</span>
+                </div>
+
+                <form id="search-form" class="control-grid">
+                    <label class="field">
+                        <span>Пользователь №1</span>
+                        <input id="source-input" name="source" list="users-list" placeholder="Например, Алина" autocomplete="off">
+                    </label>
+
+                    <label class="field">
+                        <span>Пользователь №2</span>
+                        <input id="target-input" name="target" list="users-list" placeholder="Например, Кира" autocomplete="off">
+                    </label>
+
+                    <label class="field">
+                        <span>Алгоритм</span>
+                        <select id="algorithm-select" name="algorithm">
+                            <option value="bfs">BFS — кратчайший путь</option>
+                            <option value="dfs">DFS — все маршруты</option>
+                        </select>
+                    </label>
+
+                    <div class="action-row">
+                        <button type="submit" class="button button-primary">Запустить поиск</button>
+                        <button type="button" id="swap-button" class="button button-secondary">Поменять местами</button>
+                        <button type="button" id="reset-button" class="button button-ghost">Сбросить подсветку</button>
+                    </div>
+                </form>
+
+                <datalist id="users-list"></datalist>
+
+                <div class="algorithm-explainer">
+                    <article class="algorithm-card">
+                        <p class="algorithm-kicker">BFS</p>
+                        <h3>Идёт слоями</h3>
+                        <p>
+                            Проверяет сначала самых близких друзей, затем друзей друзей.
+                            Поэтому именно BFS гарантирует кратчайшую цепочку знакомств в невзвешенном графе.
+                        </p>
+                    </article>
+
+                    <article class="algorithm-card">
+                        <p class="algorithm-kicker">DFS</p>
+                        <h3>Лезет в глубину</h3>
+                        <p>
+                            Раскрывает один путь до конца, откатывается и идёт по следующей ветке.
+                            Так мы собираем все возможные простые маршруты между двумя людьми.
+                        </p>
+                    </article>
+                </div>
+            </section>
+
+            <section class="graph-stage panel">
+                <div class="section-topline">
+                    <div>
+                        <p class="mini-title">Визуализация сети</p>
+                        <h2>Живой граф знакомств</h2>
+                    </div>
+                    <div class="legend">
+                        <span><i class="legend-dot legend-source"></i>Старт</span>
+                        <span><i class="legend-dot legend-target"></i>Цель</span>
+                        <span><i class="legend-dot legend-path"></i>Подсвеченный путь</span>
+                    </div>
+                </div>
+
+                <div id="graph-canvas" class="graph-canvas" aria-label="Граф друзей"></div>
+                <p class="graph-note">
+                    Комментарий для проверки: выбор можно делать и кликом по графу, и через поля ввода. После запуска алгоритма связи подсвечиваются, а ниже появляются объяснения шагов.
+                </p>
+            </section>
+
+            <section class="results panel">
+                <div class="section-topline">
+                    <div>
+                        <p class="mini-title">Результат поиска</p>
+                        <h2 id="result-title">Ждём запуск алгоритма</h2>
+                    </div>
+                    <span class="chip chip-accent" id="result-chip">Нет данных</span>
+                </div>
+
+                <p id="result-summary" class="result-summary">
+                    После первого запуска здесь появится краткое объяснение того, что именно нашёл алгоритм.
+                </p>
+
+                <div class="metric-strip">
+                    <article class="metric-card">
+                        <span>Маршрутов найдено</span>
+                        <strong id="metric-paths">0</strong>
+                    </article>
+                    <article class="metric-card">
+                        <span>Минимальная длина</span>
+                        <strong id="metric-distance">-</strong>
+                    </article>
+                    <article class="metric-card">
+                        <span>Порядок обхода</span>
+                        <strong id="metric-visited">-</strong>
+                    </article>
+                </div>
+
+                <div class="result-columns">
+                    <div>
+                        <p class="subheading">Найденные маршруты</p>
+                        <div id="paths-list" class="paths-list">
+                            <article class="path-card muted">
+                                Сначала запусти BFS или DFS. Потом здесь появятся маршруты, и по каждой карточке можно будет кликнуть для дополнительной подсветки.
+                            </article>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="subheading">Пошаговое объяснение</p>
+                        <ol id="steps-list" class="steps-list">
+                            <li>Пока пусто — алгоритм ещё не запускался.</li>
+                        </ol>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+</html>
