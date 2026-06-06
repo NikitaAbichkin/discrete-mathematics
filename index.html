@@ -1,69 +1,167 @@
 <!DOCTYPE html>
 <html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Красно-чёрное дерево — Удаление с пошаговым разбором</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div class="app">
-        <header class="header">
-            <h1>Красно-чёрное дерево</h1>
-            <p class="subtitle">Удаление элементов с пошаговым разбором балансировки</p>
-        </header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+    <title>Интерактивные алгоритмы</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="background-orb background-orb-one"></div>
+    <div class="background-orb background-orb-two"></div>
 
-        <div class="controls">
-            <div class="input-group">
-                <input type="text" id="nodeValue" placeholder="Значение узла">
-                <button id="addBtn" class="btn btn-add">Добавить</button>
-                <button id="addRandomBtn" class="btn btn-secondary">Случайное дерево</button>
-                <button id="clearBtn" class="btn btn-clear">Очистить</button>
-            </div>
-            <div class="speed-group">
-                <label>Скорость анимации:</label>
-                <input type="range" id="speedSlider" min="200" max="2000" value="800" step="100">
-                <span id="speedLabel">800мс</span>
-            </div>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand-block">
+          <div class="brand-mark">
+            <img
+              src="./assets/icons/diagram-3-fill.svg"
+              alt=""
+              class="brand-mark-icon"
+            />
+          </div>
+          <div class="brand-copy">
+            <p class="eyebrow">Офлайн-практикум по дискретной математике</p>
+            <h1>Интерактивные алгоритмы с пошаговым разбором</h1>
+            <p class="brand-subtitle">
+              Наглядный разбор алгоритмов с примерами, своими входными данными и
+              пошаговой визуализацией.
+            </p>
+          </div>
         </div>
 
-        <div class="main-area">
-            <div class="tree-container">
-                <svg id="treeSvg"></svg>
-                <div id="deleteButtons"></div>
-            </div>
-            <div class="sidebar">
-                <div class="steps-panel">
-                    <h3>Шаги удаления</h3>
-                    <div id="stepsList" class="steps-list">
-                        <p class="placeholder-text">Нажмите ✕ у узла, чтобы начать удаление</p>
-                    </div>
-                    <div class="step-controls" id="stepControls" style="display:none">
-                        <button id="prevStepBtn" class="btn btn-step">← Назад</button>
-                        <span id="stepCounter">0 / 0</span>
-                        <button id="nextStepBtn" class="btn btn-step">Вперёд →</button>
-                        <button id="autoPlayBtn" class="btn btn-step">▶ Авто</button>
-                        <button id="finishBtn" class="btn btn-add">Завершить</button>
-                    </div>
-                </div>
-                <div class="rules-panel">
-                    <h3>Свойства КЧ-дерева</h3>
-                    <ul class="rules-list">
-                        <li>Каждый узел — красный или чёрный</li>
-                        <li>Корень всегда чёрный</li>
-                        <li>Все листья (NIL) — чёрные</li>
-                        <li>У красного узла оба потомка чёрные</li>
-                        <li>Все пути от узла до листьев содержат одинаковое число чёрных узлов</li>
-                    </ul>
-                </div>
-            </div>
+        <div class="topbar-meta">
+          <div class="status-pill">
+            <span class="status-dot"></span>
+            Открывается в браузере
+          </div>
+          <div class="status-pill status-pill-soft">
+            Темы • задачи • пошаговый разбор
+          </div>
         </div>
 
-        <div id="tooltip" class="tooltip" style="display:none"></div>
+        <div class="topbar-nav-head">
+          <p class="eyebrow">Темы алгоритмов</p>
+          <p class="topbar-nav-copy">
+            Нажми на нужную вкладку: BFS I, DFS, Дейкстра, Беллман–Форд или
+            Backtracking.
+          </p>
+        </div>
+        <nav id="topicTabs" class="topic-tabs" aria-label="Темы алгоритмов"></nav>
+      </header>
+
+      <main class="workspace">
+        <section class="task-strip panel">
+          <div class="task-strip-head">
+            <div>
+              <p class="eyebrow">Выбор задачи</p>
+              <h3>Задачи раздела</h3>
+            </div>
+          </div>
+          <div id="taskTabs" class="task-tabs" aria-label="Задачи раздела"></div>
+        </section>
+
+        <section class="panel input-strip">
+          <div class="input-strip-head">
+            <div>
+              <p class="eyebrow">Входные данные</p>
+              <h3>Что меняем</h3>
+            </div>
+            <p class="input-strip-note">
+              Меняешь данные сверху — разбор сразу обновляется.
+            </p>
+          </div>
+          <form id="inputForm" class="input-form"></form>
+        </section>
+
+        <section class="hero-strip panel">
+          <div class="hero-strip-main">
+            <p class="eyebrow">Текущий раздел</p>
+            <h2 id="currentTopicTitle">Загрузка...</h2>
+            <p id="currentTaskDescription" class="hero-description"></p>
+          </div>
+
+          <div class="hero-strip-side">
+            <div class="hero-card">
+              <span class="hero-card-label">Сложность</span>
+              <strong id="taskComplexity">—</strong>
+            </div>
+            <div class="hero-card">
+              <span class="hero-card-label">Подход</span>
+              <strong id="taskAlgorithmFamily">—</strong>
+            </div>
+            <div class="hero-card">
+              <span class="hero-card-label">Финальный ответ</span>
+              <strong id="taskAnswerPreview">—</strong>
+            </div>
+          </div>
+        </section>
+
+        <div class="content-grid">
+          <section class="panel visual-panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Визуализация</p>
+                <h3 id="visualizationTitle">Состояние алгоритма</h3>
+              </div>
+              <div id="visualizationLegend" class="legend"></div>
+            </div>
+
+            <div id="visualizationStage" class="visualization-stage"></div>
+            <div id="visualizationPanels" class="visualization-panels"></div>
+          </section>
+
+          <section class="panel side-panel">
+            <div class="panel-head side-section-head">
+              <div>
+                <p class="eyebrow">Пошаговый разбор</p>
+                <h3 id="currentStepTitle">Текущий шаг</h3>
+              </div>
+              <span id="stepCounter" class="step-counter">Шаг 0 / 0</span>
+            </div>
+
+            <div class="panel-body panel-body-explanation">
+              <article class="step-card">
+                <h4 id="stepAction">Скоро здесь появится разбор</h4>
+                <p id="stepWhy" class="step-why">
+                  Выбери задачу или измени входные данные, чтобы посмотреть трассировку.
+                </p>
+                <div id="stepPreview" class="step-preview"></div>
+              </article>
+
+              <div class="step-navigation">
+                <button
+                  id="inlinePrevStepButton"
+                  class="button button-secondary"
+                >
+                  <img
+                    src="./assets/icons/arrow-left-circle.svg"
+                    alt=""
+                    class="button-icon"
+                  />
+                  Предыдущий шаг
+                </button>
+                <button
+                  id="inlineNextStepButton"
+                  class="button button-secondary"
+                >
+                  Следующий шаг
+                  <img
+                    src="./assets/icons/arrow-right-circle.svg"
+                    alt=""
+                    class="button-icon"
+                  />
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
     </div>
 
-    <script src="rbtree.js"></script>
-    <script src="render.js"></script>
-    <script src="app.js"></script>
-</body>
+    <script src="./js/bundle.js" defer></script>
+  </body>
 </html>
